@@ -19,7 +19,7 @@ namespace DirectRoute
             }
             for (int i = 0; i < fb.Length; i++)
             {
-                for (int c = 0; c < 10; c++ /*This is how C++ was invented*/)
+                for (int c = 0; c < 100; c++ /*This is how C++ was invented*/)
                 {
                     fb[i].AddConnection(fb[shield.Next(0, fb.Length)]);
                 }
@@ -28,8 +28,12 @@ namespace DirectRoute
 
         static void Main(string[] args)
         {
+            
+
             Stopwatch mwatch = new Stopwatch();
-            Agent[] fb = new Agent[500];
+            Random mrand = new Random();
+            Agent[] fb = new Agent[200];
+            
             PopulateRandom(fb);
 
 
@@ -41,7 +45,7 @@ namespace DirectRoute
                 for (int c = 0; c < fb.Length; c++ /*this is how C++ was invented*/)
                 {
                     mwatch.Start();
-                    int hops = fb[i].TryRoute(null, fb[c], 0);
+                    int hops = fb[i].TryRoute(fb[i],null, fb[c], 0);
                     if(hops>maxhops)
                     {
                         maxhops = hops;
@@ -56,6 +60,10 @@ namespace DirectRoute
                         }
                     }else
                     {
+                        if(!fb[i].CanRoute(fb[c].ID))
+                        {
+                            throw new Exception();
+                        }
                         reachable++;
                         total++;
                     }

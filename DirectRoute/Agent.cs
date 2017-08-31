@@ -10,6 +10,8 @@ namespace DirectRoute
     {
         HashSet<uint> knownUnreachables = new HashSet<uint>();
         SortedSet<Agent> connections = new SortedSet<Agent>();
+        Dictionary<Agent, Agent> knownMappings = new Dictionary<Agent, Agent>();
+
         Agent[] cachedConnections = null;
         //List<Agent> connections = new List<Agent>();
         public uint ID;
@@ -21,6 +23,10 @@ namespace DirectRoute
         object searchToken = null;
         bool GraphSearch(uint id,object token)
         {
+            if(id == ID)
+            {
+                return true;
+            }
             if(knownUnreachables.Contains(id))
             {
                 return false;
@@ -37,14 +43,18 @@ namespace DirectRoute
                 {
                     return true;
                 }
-                iable.GraphSearch(id, token);
+               if(iable.GraphSearch(id, token))
+                {
+                    return true;
+                }
             }
-            knownUnreachables.Add(id);
             return false;
         }
         public bool CanRoute(uint id)
         {
-            return GraphSearch(id, new object());
+            bool retval = GraphSearch(id, new object());
+            
+            return retval;
         }
         public void AddConnection(Agent other)
         {
@@ -56,11 +66,16 @@ namespace DirectRoute
             }
             connections.Add(other);
         }
-        public int TryRoute(Agent from,Agent dest,int hops)
+        public int TryRoute(Agent origin,Agent from,Agent dest,int hops)
         {
-
+            if (!knownMappings.ContainsKey(origin) && from != null)
+            {
+                knownMappings.Add(origin, from);
+            }
+            
             hops++;
-            if(dest.ID == ID)
+            
+            if (dest == this)
             {
                 return hops;
             }
@@ -68,8 +83,11 @@ namespace DirectRoute
             {
                 return -1;
             }
-
-            if(cachedConnections == null)
+            if (knownMappings.ContainsKey(dest))
+            {
+                return knownMappings[dest].TryRoute(origin, this, dest, hops);
+            }
+            if (cachedConnections == null)
             {
                 cachedConnections = connections.ToArray();
             }
@@ -89,36 +107,37 @@ namespace DirectRoute
 
             if(cachedConnections[found] == from)
             {
-                return -1; //NOTE: This should never happen
-            }
-            return cachedConnections[found].TryRoute(this, dest, hops);
-
-            /*uint bestDiff = uint.MaxValue;
-            Agent candidate = null;
-            foreach(var iable in connections)
-            {
-                if(iable == from)
+                uint bestDiff = uint.MaxValue;
+                Agent value = null;
+                if (found + 1 < cachedConnections.Length)
                 {
-                    continue;
+                    uint diff = cachedConnections[found + 1].ID ^ ID;
+                    if (found > 0)
+                    {
+                        uint odiff = ID ^ cachedConnections[found - 1].ID;
+                        if (odiff < diff)
+                        {
+                            found--;
+                        }
+                        else
+                        {
+                            found++;
+                        }
+                    }
                 }
-                uint diff = iable.ID ^ dest;
-                if(diff<bestDiff)
+                else
                 {
-                    candidate = iable;
-                    bestDiff = diff;
+                    found--;
                 }
             }
-            if(candidate == null || hops == 30)
-            {
-                return -1; //unroutable
-            }
-
-            return candidate.TryRoute(this, dest, hops);*/
+            int retval = cachedConnections[found].TryRoute(origin,this, dest, hops);
+            return retval;
+           
         }
 
         public int CompareTo(Agent other)
         {
-            return ID.CompareTo(other.ID);
+            return unchecked((int)(ID-other.ID));
         }
     }
 }
